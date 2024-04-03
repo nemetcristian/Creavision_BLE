@@ -1,0 +1,67 @@
+
+esphome:
+  name: ble-esp
+  friendly_name: BLE_ESP
+esp32:
+  # board: esp32doit-devkit-v1
+  board: esp32-c3-devkitm-1
+
+  framework:
+    type: arduino
+    # version: 2.0.3
+external_components:
+  - source: 
+      type: local
+      path: "G:/ESP_home_Creavision_Ble/CRTECH/costume_components"
+  - source:
+      type: git  
+      url:  "https://github.com/zdzichu6969/esphome-components"
+     
+
+wifi:
+  ssid: "ABCDEFGH"
+  password: "12345678"
+
+logger:
+  # level: VERBOSE
+
+Creavision_BLE:
+  id: creavision_ble
+  security_mode: secure
+
+  on_show_pass_key:
+  - logger.log:
+      format: "pass key is %s"
+      args: 'pass_key.c_str()'
+
+  on_authentication_complete:
+  - logger.log:
+      format: "BLE authentication complete %d" # shows 1 on success, 0 on failure
+      args: 'success'
+    
+  on_connected:
+    - logger.log: "Connected."
+  on_disconnected:
+    - logger.log: "Disconnected."
+
+text_sensor:
+  - platform: template
+    name: "Received BLE Data"
+    update_interval: 5s
+    lambda: |-
+      const char* received_data_cstr = id(creavision_ble).received_data.c_str();
+      std::string received_data(received_data_cstr);
+      int separator_index = received_data.find(':');
+      std::string ssid;
+      std::string password;
+      if (separator_index != -1) {
+        ssid = received_data.substr(0, separator_index);
+        password = received_data.substr(separator_index + 1);
+        ESP_LOGD("Received BLE Data", "SSID: %s, Password: %s", ssid.c_str(), password.c_str());
+        wifi::global_wifi_component->save_wifi_sta(ssid, password);
+      }
+      else {
+        ESP_LOGW("Received BLE Data", "No separator found in received data");
+      }
+      return {};
+
